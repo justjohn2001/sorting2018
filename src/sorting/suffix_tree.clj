@@ -57,9 +57,9 @@
 
 (defrecord Suffix [origin-node first-char last-char]
   ISuffix
-  (explicit? [{:keys [last-char first-char] :as this}] (< last-char first-char))
+  (explicit? [{:keys [first-char last-char] :as this}] (< last-char first-char))
   (implicit? [_] (complement explicit?))
-  (canonize [{:keys [first-char last-char origin-node] :as this} s]
+  (canonize [{:keys [origin-node first-char last-char] :as this} s]
     (printf "Canonizing %s\n" (pr-str this))
     (printf "Edges - %s\n" (keys @Edges))
     (if (explicit? this)
@@ -73,8 +73,9 @@
             (let [new-suffix (assoc suffix
                                     :first-char (+ (:first-char suffix) span 1)
                                     :origin-node (:end-node edge))]
-              (when (<= (:first-char new-suffix) (:last-char new-suffix))
-                (recur new-suffix (find-edge (:end-node edge) (nth s (:first-char new-suffix))))))))))))
+              (if (<= (:first-char new-suffix) (:last-char new-suffix))
+                (recur new-suffix (find-edge (:end-node edge) (nth s (:first-char new-suffix))))
+                suffix))))))))
 
 (defn add-suffix-link
   [last-parent parent]
