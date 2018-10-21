@@ -82,43 +82,6 @@
     (swap! Nodes #(assoc % last-parent parent)))
   parent)
 
-#_(defn add-prefix
-  [next-active-suffix last-char s]
-  (printf "add-prefix %s %s %s\n" next-active-suffix last-char s)
-  (loop [last-parent-node -1
-         active-suffix' next-active-suffix]
-    (printf "looping %s %s\n" last-parent-node (pr-str active-suffix'))
-    (let [add-prefix-step-2 (fn [parent-node]
-                              (printf "add-prefix-step-2 last - %s parent - %s\n" last-parent-node parent-node)
-                              (let [new-edge (create-edge last-char (count s) parent-node)]
-                                (edge-insert new-edge (nth s last-char)))
-                              [(add-suffix-link last-parent-node parent-node)
-                               (canonize (if (zero? (:origin-node active-suffix'))
-                                           (update active-suffix' :first-char inc)
-                                           (update active-suffix' :origin-node #(nth @Nodes %)))
-                                         s)])
-          parent-node (:origin-node active-suffix')]
-      (if (explicit? active-suffix')
-        (if (find-edge (:origin-node active-suffix') (nth s last-char))
-          (do (add-suffix-link last-parent-node parent-node)
-              (canonize (update active-suffix' :last-char inc) s))
-          (do
-            (println "Explicit, not found")
-            (let [[new-parent new-suffix]
-                  (add-prefix-step-2 (:origin-node active-suffix'))]
-              (printf "Rcuring with %s\n" new-parent)
-              (recur new-parent new-suffix))))
-        (let [edge (find-edge (:origin-node active-suffix') (nth s (:first-char active-suffix')))
-              span (- (:last-char active-suffix') (:first-char active-suffix'))]
-          (printf "Implicit - %s\n" edge)
-          (if (= (nth s (+ (:first-char edge) span 1))
-                 (nth s last-char))
-            (do (add-suffix-link last-parent-node parent-node)
-                (canonize (update active-suffix' :last-char inc) s))
-            (let [[new-parent new-suffix]
-                  (add-prefix-step-2 (split-edge edge active-suffix' s))]
-              (recur new-parent new-suffix))))))))
-
 (defn add-prefix-edge
   [active-suffix last-char last-parent parent s]
   (let [edge (create-edge last-char (count s) parent)
