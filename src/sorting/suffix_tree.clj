@@ -2,8 +2,9 @@
   (:gen-class)
   (:require [clojure.tools.logging :as log]))
 
-(def Nodes (atom [-1]))
-(def Edges (atom {}))
+; The only thing a Node has is a suffix-link, so just store it as a vector
+(def Nodes (volatile! [-1]))
+(def Edges (volatile! {}))
 
 (defn find-edge
   [node c]
