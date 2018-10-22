@@ -1,12 +1,13 @@
 (ns sorting.suffix-tree
-  (:gen-class))
+  (:gen-class)
+  (:require [clojure.tools.logging :as log]))
 
 (def Nodes (atom [-1]))
 (def Edges (atom {}))
 
 (defn find-edge
   [node c]
-  (printf "Finding %s-%s\n" node c)
+  (log/debug "Finding %s-%s\n" node c)
   (get @Edges (str node c)))
 
 (declare create-edge)
@@ -18,13 +19,13 @@
 (defrecord Edge [first-char last-char start-node end-node id]
   IEdge
   (edge-insert [{:keys [start-node id] :as this} c]
-    (printf "Insert %d%c\n" start-node c)
+    (log/debug "Insert %d%c\n" start-node c)
     (swap! Edges #(assoc % (str start-node c) (assoc this :id (or id (count @Edges)))))
-    (printf "Keys %s\n" (keys @Edges)))
+    (log/debug "Keys %s\n" (keys @Edges)))
   (split-edge [this
                {:keys [first-char last-char origin-node] :as suffix}
                s]
-    (printf "Splitting edge - %s with %s\n" this suffix)
+    (log/debug "Splitting edge - %s with %s\n" this suffix)
     (let [new-edge (create-edge (:first-char this)
                              (+ (:first-char this) (- last-char first-char))
                              origin-node)]
@@ -44,8 +45,7 @@
            last-char
            parent-node
            (let [i (count @Nodes)]
-             (when (> i 100) (throw (ex-info "Too many nodes" {:i i})))
-             (printf "Adding node %d\n" i)
+             (log/debug "Adding node %d\n" i)
              (swap! Nodes #(conj % -1))
              i)
            nil)))
@@ -59,14 +59,14 @@
   ISuffix
   (explicit? [{:keys [first-char last-char] :as this}] (< last-char first-char))
   (implicit? [_] (complement explicit?))
-  (canonize [{:keys [origin-node first-char last-char] :as this} s]
-    (printf "Canonizing %s\n" (pr-str this))
-    (printf "Edges - %s\n" (keys @Edges))
+  (canonize [this s]
+    (log/debug "Canonizing %s\n" (pr-str this))
+    (log/debug "Edges - %s\n" (keys @Edges))
     (if (explicit? this)
       this
       (loop [suffix this
-             edge (find-edge origin-node (nth s first-char))]
-        (printf "Edge - %s\n" (pr-str edge))
+             edge (find-edge (:origin-node suffix) (nth s (:first-char suffix)))]
+        (log/debug "Edge - %s\n" (pr-str edge))
         (let [span (- (:last-char edge) (:first-char edge))]
           (if (> span (- (:last-char suffix) (:first-char suffix)))
             suffix
@@ -75,7 +75,7 @@
                                     :origin-node (:end-node edge))]
               (if (<= (:first-char new-suffix) (:last-char new-suffix))
                 (recur new-suffix (find-edge (:end-node edge) (nth s (:first-char new-suffix))))
-                suffix))))))))
+                new-suffix))))))))
 
 (defn add-suffix-link
   [last-parent parent]
@@ -99,36 +99,32 @@
   (loop [{:keys [active-suffix last-parent]}
          {:active-suffix active-suffix
           :last-parent -1}]
-    (printf "add-prefix-loop %s %s %s\n" (pr-str active-suffix) last-char last-parent)
+    (log/debug "add-prefix-loop %s %s %s\n" (pr-str active-suffix) last-char last-parent)
     (let [parent (:origin-node active-suffix)]
       (if (explicit? active-suffix)
-        (do (println "Explicit")
-            (if (find-edge (:origin-node active-suffix) (nth s last-char))
-              {:last-parent last-parent :parent parent :suffix active-suffix}
-              (do (println "Recur - Edge Not Found")
-                  (recur (add-prefix-edge active-suffix
-                                          last-char
-                                          last-parent
-                                          parent
-                                          s)))))
-        (do (println "Implicit")
-            (let [edge (find-edge (:origin-node active-suffix) (nth s (:first-char active-suffix)))
-                  span (- (:last-char active-suffix) (:first-char active-suffix))]
-              (if (= (nth s (+ (:first-char edge) span 1)) (nth s last-char))
-                {:last-parent last-parent :parent parent :suffix active-suffix}
-                (do (println "Recur - char doesn't match")
-                    (recur (add-prefix-edge active-suffix
-                                            last-char
-                                            last-parent
-                                            (split-edge edge active-suffix s)
-                                            s))))
-              ))))))
+        (if (find-edge (:origin-node active-suffix) (nth s last-char))
+          {:last-parent last-parent :parent parent :suffix active-suffix}
+          (recur (add-prefix-edge active-suffix
+                                  last-char
+                                  last-parent
+                                  parent
+                                  s)))
+        (let [edge (find-edge (:origin-node active-suffix) (nth s (:first-char active-suffix)))
+              span (- (:last-char active-suffix) (:first-char active-suffix))]
+          (if (= (nth s (+ (:first-char edge) span 1)) (nth s last-char))
+            {:last-parent last-parent :parent parent :suffix active-suffix}
+            (recur (add-prefix-edge active-suffix
+                                    last-char
+                                    last-parent
+                                    (split-edge edge active-suffix s)
+                                    s)))
+          )))))
 
 (defn add-prefix
   [active-suffix last-char s]
-  (printf "Starting %s %s\n" (pr-str active-suffix) last-char)
+  (log/debug "Starting %s %s\n" (pr-str active-suffix) last-char)
   (let [{:keys [last-parent parent suffix]} (add-prefix-loop active-suffix last-char s)]
-    (printf "Finishing %s %s" (pr-str active-suffix) last-char)
+    (log/debug "Finishing %s %s" (pr-str active-suffix) last-char)
     (add-suffix-link last-parent parent)
     (canonize (update suffix :last-char inc) s)))
 
@@ -144,14 +140,13 @@
             (nth @Nodes (:end-node i))
             (:first-char i)
             (:last-char i)
-            (subs s (:first-char i) (min (inc (:last-char i)) (count s))))
+            (pr-str (subs s (:first-char i) (min (inc (:last-char i)) (count s)))))
     ))
 
 (defn build
   [s]
   (reset! Nodes [-1])
   (reset! Edges {})
-  (prn s)
   (let [suffixed-s (str s "\0")]
     (reduce (fn [active i] (add-prefix active i suffixed-s))
             (->Suffix 0 0 -1)
@@ -159,5 +154,17 @@
     (dump-edges suffixed-s))
   )
 
-
-
+(defn m-lrmus
+  [s]
+  (build s)
+  (let [edges (vals @Edges)
+        s-len (inc (count s))]
+    (reduce (fn [acc i] (assoc acc
+                               (:end-node i)
+                               {:len (- (:last-char i)
+                                        (:first-char i))
+                                :start-node (:start-node i)
+                                :last-char (:last-char i)}))
+            {}
+            (filter #(not= (:last-char %) s-len)
+                    edges))))
