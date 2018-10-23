@@ -118,8 +118,7 @@
                                     last-char
                                     last-parent
                                     (split-edge edge active-suffix s)
-                                    s)))
-          )))))
+                                    s))))))))
 
 (defn add-prefix
   [active-suffix last-char s]
@@ -141,14 +140,13 @@
             (nth @Nodes (:end-node i))
             (:first-char i)
             (:last-char i)
-            (pr-str (subs s (:first-char i) (min (inc (:last-char i)) (count s)))))
-    ))
+            (pr-str (subs s (:first-char i) (min (inc (:last-char i)) (count s)))))))
 
 (defn build
   [s]
   (vreset! Nodes [-1])
   (vreset! Edges {})
-  (let [suffixed-s (str s "\0")]
+  (let [suffixed-s (conj (into [] (seq s)) (char 0))]
     (reduce (fn [active i] (add-prefix active i suffixed-s))
             (->Suffix 0 0 -1)
             (range (count suffixed-s)))))
