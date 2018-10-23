@@ -21,7 +21,7 @@
   IEdge
   (edge-insert [{:keys [start-node id] :as this} c]
     (log/debug "Insert %d%c\n" start-node c)
-    (swap! Edges #(assoc % (str start-node c) (assoc this :id (or id (count @Edges)))))
+    (vswap! Edges #(assoc % (str start-node c) (assoc this :id (or id (count @Edges)))))
     (log/debug "Keys %s\n" (keys @Edges)))
   (split-edge [this
                {:keys [first-char last-char origin-node] :as suffix}
@@ -30,7 +30,7 @@
     (let [new-edge (create-edge (:first-char this)
                              (+ (:first-char this) (- last-char first-char))
                              origin-node)]
-      (swap! Nodes #(assoc % (:end-node new-edge) origin-node))
+      (vswap! Nodes #(assoc % (:end-node new-edge) origin-node))
       (edge-insert new-edge (nth s (:first-char new-edge)))
       (let [new-start (+ (:first-char this) (- last-char first-char) 1)]
         (edge-insert (assoc this
@@ -47,7 +47,7 @@
            parent-node
            (let [i (count @Nodes)]
              (log/debug "Adding node %d\n" i)
-             (swap! Nodes #(conj % -1))
+             (vswap! Nodes #(conj % -1))
              i)
            nil)))
 
@@ -81,7 +81,7 @@
 (defn add-suffix-link
   [last-parent parent]
   (when (> last-parent 0)
-    (swap! Nodes #(assoc % last-parent parent)))
+    (vswap! Nodes #(assoc % last-parent parent)))
   parent)
 
 (defn add-prefix-edge
@@ -146,26 +146,49 @@
 
 (defn build
   [s]
-  (reset! Nodes [-1])
-  (reset! Edges {})
+  (vreset! Nodes [-1])
+  (vreset! Edges {})
   (let [suffixed-s (str s "\0")]
     (reduce (fn [active i] (add-prefix active i suffixed-s))
             (->Suffix 0 0 -1)
-            (range (count suffixed-s)))
-    (dump-edges suffixed-s))
-  )
+            (range (count suffixed-s)))))
 
 (defn m-lrmus
   [s]
   (build s)
   (let [edges (vals @Edges)
-        s-len (inc (count s))]
-    (reduce (fn [acc i] (assoc acc
-                               (:end-node i)
-                               {:len (- (:last-char i)
-                                        (:first-char i))
-                                :start-node (:start-node i)
-                                :last-char (:last-char i)}))
-            {}
-            (filter #(not= (:last-char %) s-len)
-                    edges))))
+        s-len (inc (count s))
+        by-start-node (group-by :start-node
+                                (map #(assoc %
+                                             :len (inc (- (:last-char %)
+                                                          (:first-char %)))) edges))]
+    (loop [interior (filter #(not= s-len (:last-char %)) (get by-start-node 0))
+           prior-count (count interior)]
+      (let [map-fn (fn [i]
+                     (if-some [next-level (seq (filter #(not= s-len (:last-char %))
+                                                       (get by-start-node (:end-node i))))]
+                       (map #(hash-map
+                              :last-char (:last-char %)
+                              :len (+ (:len i) (:len %))
+                              :start-node (:start-node i)
+                              :end-node (:end-node %))
+                            next-level)
+                       [i]))
+            new-interior (mapcat map-fn interior)
+            new-count (count new-interior)]
+        (if (not= interior new-interior)
+          (recur new-interior new-count)
+          (first (sort (fn [{a-sort-by :len a-string :s}
+                            {b-sort-by :len b-string :s}]
+                         (cond (< a-sort-by b-sort-by) 1
+                               (> a-sort-by b-sort-by) -1
+                               :else (compare a-string b-string)))
+                       (map #(let [len (inc (:len %))  ; to get the first unique char
+                                   last-char  (inc (:last-char %)) ; to include the first unique character
+                                   first-char (inc (- last-char len))
+                                   s (subs s first-char (+ first-char len))]
+                               {:len len
+                                :first-char first-char
+                                :sort-by (+ (* 1024 len) (- 1024 first-char))
+                                :s s})
+                            new-interior))))))))
