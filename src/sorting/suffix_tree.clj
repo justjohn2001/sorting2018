@@ -178,17 +178,13 @@
             new-count (count new-interior)]
         (if (not= interior new-interior)
           (recur new-interior new-count)
-          (first (sort (fn [{a-sort-by :len a-string :s}
-                            {b-sort-by :len b-string :s}]
-                         (cond (< a-sort-by b-sort-by) 1
-                               (> a-sort-by b-sort-by) -1
-                               :else (compare a-string b-string)))
+          (first (sort-by :sort-by
                        (map #(let [len (inc (:len %))  ; to get the first unique char
                                    last-char  (inc (:last-char %)) ; to include the first unique character
                                    first-char (inc (- last-char len))
                                    s (subs s first-char (+ first-char len))]
                                {:len len
                                 :first-char first-char
-                                :sort-by (+ (* 1024 len) (- 1024 first-char))
+                                :sort-by (+ (* -1024 len) first-char)
                                 :s s})
                             new-interior))))))))
