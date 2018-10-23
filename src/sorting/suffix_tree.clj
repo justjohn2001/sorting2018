@@ -185,6 +185,6 @@
                                    s (subs s first-char (+ first-char len))]
                                {:len len
                                 :first-char first-char
-                                :sort-by (+ (* -1024 len) first-char)
+                                :sort-by (- first-char (* 1024 len))
                                 :s s})
                             new-interior))))))))
