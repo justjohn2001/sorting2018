@@ -181,7 +181,8 @@
                                    last-char  (inc (:last-char %)) ; to include the first unique character
                                    first-char (inc (- last-char len))
                                    s (subs s first-char (+ first-char len))]
-                               {:len len
+                               [len first-char s]
+                               #_{:len len
                                 :first-char first-char
                                 :sort-by (- first-char (* 1024 len))
                                 :s s})
