@@ -3,7 +3,7 @@
   (:require [clojure.tools.logging :as log]))
 
 ; The only thing a Node has is a suffix-link, so just store it as a vector
-(def Nodes (volatile! [-1]))
+(def Nodes (volqatile! [-1]))
 (def Edges (volatile! {}))
 
 (defn find-edge
@@ -152,7 +152,7 @@
             (range (count suffixed-s)))))
 
 (defn m-lrmus
-  [s]
+  [s i]
   (build s)
   (let [edges (vals @Edges)
         s-len (inc (count s))
@@ -176,14 +176,10 @@
             new-count (count new-interior)]
         (if (not= interior new-interior)
           (recur new-interior new-count)
-          (first (sort-by :sort-by
-                       (map #(let [len (inc (:len %))  ; to get the first unique char
-                                   last-char  (inc (:last-char %)) ; to include the first unique character
-                                   first-char (inc (- last-char len))
-                                   s (subs s first-char (+ first-char len))]
-                               [len first-char s]
-                               #_{:len len
-                                :first-char first-char
-                                :sort-by (- first-char (* 1024 len))
-                                :s s})
-                            new-interior))))))))
+          (first (sort-by #(% 4)
+                          (map #(let [len (inc (:len %)) ; to get the first unique char
+                                      last-char  (inc (:last-char %)) ; to include the first unique character
+                                      first-char (inc (- last-char len))
+                                      s (subs s first-char (+ first-char len))]
+                                  [len first-char s i (- first-char (* 1024 len))])
+                               new-interior))))))))
