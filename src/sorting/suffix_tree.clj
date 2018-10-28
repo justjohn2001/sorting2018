@@ -8,7 +8,6 @@
 
 (defn find-edge
   [node c]
-  (log/debug "Finding %s-%s\n" node c)
   (get @Edges (str node c)))
 
 (declare create-edge)
@@ -20,13 +19,10 @@
 (defrecord Edge [first-char last-char start-node end-node id]
   IEdge
   (edge-insert [{:keys [start-node id] :as this} c]
-    (log/debug "Insert %d%c\n" start-node c)
-    (vswap! Edges #(assoc % (str start-node c) (assoc this :id (or id (count @Edges)))))
-    (log/debug "Keys %s\n" (keys @Edges)))
+    (vswap! Edges #(assoc % (str start-node c) (assoc this :id (or id (count @Edges))))))
   (split-edge [this
                {:keys [first-char last-char origin-node] :as suffix}
                s]
-    (log/debug "Splitting edge - %s with %s\n" this suffix)
     (let [new-edge (create-edge (:first-char this)
                              (+ (:first-char this) (- last-char first-char))
                              origin-node)]
@@ -46,7 +42,6 @@
            last-char
            parent-node
            (let [i (count @Nodes)]
-             (log/debug "Adding node %d\n" i)
              (vswap! Nodes #(conj % -1))
              i)
            nil)))
@@ -61,13 +56,10 @@
   (explicit? [{:keys [first-char last-char] :as this}] (< last-char first-char))
   (implicit? [_] (complement explicit?))
   (canonize [this s]
-    (log/debug "Canonizing %s\n" (pr-str this))
-    (log/debug "Edges - %s\n" (keys @Edges))
     (if (explicit? this)
       this
       (loop [suffix this
              edge (find-edge (:origin-node suffix) (nth s (:first-char suffix)))]
-        (log/debug "Edge - %s\n" (pr-str edge))
         (let [span (- (:last-char edge) (:first-char edge))]
           (if (> span (- (:last-char suffix) (:first-char suffix)))
             suffix
@@ -100,7 +92,6 @@
   (loop [{:keys [active-suffix last-parent]}
          {:active-suffix active-suffix
           :last-parent -1}]
-    (log/debug "add-prefix-loop %s %s %s\n" (pr-str active-suffix) last-char last-parent)
     (let [parent (:origin-node active-suffix)]
       (if (explicit? active-suffix)
         (if (find-edge (:origin-node active-suffix) (nth s last-char))
@@ -122,9 +113,7 @@
 
 (defn add-prefix
   [active-suffix last-char s]
-  (log/debug "Starting %s %s\n" (pr-str active-suffix) last-char)
   (let [{:keys [last-parent parent suffix]} (add-prefix-loop active-suffix last-char s)]
-    (log/debug "Finishing %s %s" (pr-str active-suffix) last-char)
     (add-suffix-link last-parent parent)
     (canonize (update suffix :last-char inc) s)))
 
