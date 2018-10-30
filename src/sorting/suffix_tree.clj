@@ -186,3 +186,22 @@
                                 :sort-by (- first-char (* 1024 len))
                                 :s s})
                             new-interior))))))))
+
+(defn n-lrmus
+  ([s] (n-lrmus (into [] (seq s)) 0 1 [-1 -1]))
+  ([s f c status]
+   (if (< f (count s))
+     (if (< c (count s))
+       (if (= (nth s f) (nth s c))
+         (let [dup-cnt (reduce (fn [cnt [a b]] (if (= a b)
+                                                 (inc cnt)
+                                                 (reduced cnt)))
+                               0
+                               (map #(vector %1 %2) (drop f s) (drop c s)))]
+           #_(prn dup-cnt)
+           (recur s f (inc c) (if (> dup-cnt (first status))
+                                [dup-cnt f]
+                                status)))
+         (recur s f (inc c) status))
+       (recur s (inc f) (+ f 2) status))
+     status)))
