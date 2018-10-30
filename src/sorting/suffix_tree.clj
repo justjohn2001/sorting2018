@@ -193,4 +193,4 @@
                                 status)))
          (recur s f (inc c) status))
        (recur s (inc f) (+ f 2) status))
-     status)))
+     [(inc (first status)) (second status)])))
