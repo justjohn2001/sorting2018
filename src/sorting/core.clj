@@ -1,7 +1,6 @@
 (ns sorting.core
   (:gen-class)
   (:require [sorting.suffix-tree :as tree]
-            [sorting.sort :as s]
             [clojure.java.io :as io]))
 
 (defn -main
@@ -13,6 +12,8 @@
     (def sorted (my-sort to-sort))
     (println (- end (System/currentTimeMillis)))
     (dorun (map #(spit output % :append true) sorted))))
+
+;; load everything in order skipping -main
 
 (defn lrmu-sort [coll]
   (let [compares [- - compare (fn [idx-1 idx-2] (compare (nth coll idx-1) (nth coll idx-2)))]]
@@ -26,11 +27,22 @@
 
 (defn extract [d] (nth data (nth d 3)))
 
+;; We are shooting for 3 seconds ... or at least less than 6.
+;; On my macbook, peter's code took 3 seconds.
 (time (def sorted (doall (map extract (lrmu-sort data)))))
 
+;; sorted data to compare to
 (def sorted-data (with-open [rdr (clojure.java.io/reader (io/resource "out1.txt"))]
                    (doall (line-seq rdr))))
 
-(def parsed (time (doall (map-indexed (fn [idx s] (tree/m-lrmus s idx)) data))))
+(= sorted sorted-data)
 
-(time (spit "out1.txt" (clojure.string/join "\n" sorted)))
+#_(def parsed (time (doall (map-indexed (fn [idx s] (tree/m-lrmus s idx)) data))))
+
+;; Run me
+(time (spit "out1.txt" (str (clojure.string/join "\n" sorted) "\n")))
+;; Then
+;; diff out1.txt resources/out1.txt
+;; should be clear
+
+;;todo warn of reflection

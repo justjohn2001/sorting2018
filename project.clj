@@ -6,8 +6,9 @@
   :dependencies [[org.clojure/clojure "1.8.0"]]
   :resource-paths ["test-resources" "resources"]
   :main ^:skip-aot sorting.core
+  #_:global-vars #_{*warn-on-reflection* true}
   :target-path "target/%s"
-  :jvm-opts ["-Dcom.sun.management.jmxremote"
+  #_:jvm-opts #_["-Dcom.sun.management.jmxremote"
              "-Dcom.sun.management.jmxremote.ssl=false"
              "-Dcom.sun.management.jmxremote.authenticate=false"
              "-Dcom.sun.management.jmxremote.port=43210"]
