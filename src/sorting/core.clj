@@ -29,30 +29,3 @@
     (println (- end start))
 
     (spit output (str (clojure.string/join "\n" sorted) "\n"))))
-
-;; load everything in order skipping -main
-
-
-#_(def data (with-open [rdr (clojure.java.io/reader (io/resource "data1.txt"))]
-            (doall (line-seq rdr))))
-
-;; We are shooting for 3 seconds ... or at least less than 6.
-;; On my macbook, peter's code took 3 seconds.
-
-#_(time (def sorted (doall (lrmu-sort data))))
-
-;; sorted data to compare to
-#_(def sorted-data (with-open [rdr (clojure.java.io/reader (io/resource "out1.txt"))]
-                   (doall (line-seq rdr))))
-
-#_(= sorted sorted-data)
-
-#_(def parsed (time (doall (map-indexed (fn [idx s] (tree/m-lrmus s idx)) data))))
-
-;; Run me
-#_(time (spit "out1.txt" (str (clojure.string/join "\n" sorted) "\n")))
-;; Then
-;; diff out1.txt resources/out1.txt
-;; should be clear
-
-;;todo warn of reflection
